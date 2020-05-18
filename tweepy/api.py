@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 import imghdr
+import mimetypes
 import os
 
 import six
@@ -220,8 +221,8 @@ class API(object):
             :allowed_param:
         """
         f = kwargs.pop('file', None)
-        # Initialize upload (Twitter cannot handle videos > 15 MB)
-        headers, post_data, fp = API._chunk_video('init', filename, 15360, form_field='media', f=f)
+        # Initialize upload (Twitter cannot handle videos > 512 MB)
+        headers, post_data, fp = API._chunk_video('init', filename, 512*1024, form_field='media', f=f)
         kwargs.update({ 'headers': headers, 'post_data': post_data })
 
         # Send the INIT request
@@ -241,7 +242,7 @@ class API(object):
             fsize = os.path.getsize(filename)
             nloops = int(fsize / chunk_size) + (1 if fsize % chunk_size > 0 else 0)
             for i in range(nloops):
-                headers, post_data, fp = API._chunk_video('append', filename, 15360, chunk_size=chunk_size, f=fp, media_id=media_info.media_id, segment_index=i)
+                headers, post_data, fp = API._chunk_video('append', filename, 512*1024, chunk_size=chunk_size, f=fp, media_id=media_info.media_id, segment_index=i)
                 kwargs.update({ 'headers': headers, 'post_data': post_data, 'parser': RawParser() })
                 # The APPEND command returns an empty response body
                 bind_api(
@@ -254,7 +255,7 @@ class API(object):
                     upload_api=True
                 )(*args, **kwargs)
             # When all chunks have been sent, we can finalize.
-            headers, post_data, fp = API._chunk_video('finalize', filename, 15360, media_id=media_info.media_id)
+            headers, post_data, fp = API._chunk_video('finalize', filename, 512*1024, media_id=media_info.media_id)
             kwargs.update({ 'headers': headers, 'post_data': post_data })
             # The FINALIZE command returns media information
             return bind_api(
